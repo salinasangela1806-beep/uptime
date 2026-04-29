@@ -17,7 +17,6 @@ TWILIO_SID    = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_TOKEN  = os.environ.get('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM   = os.environ.get('TWILIO_WHATSAPP_FROM', '')
 
-
 # ═══════════════════════════════════════════════════════════════════
 # HANDLER PRINCIPAL — recibe webhooks de Twilio/Meta WhatsApp
 # ═══════════════════════════════════════════════════════════════════
