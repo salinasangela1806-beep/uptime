@@ -1,18 +1,22 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/**", "use": "@vercel/python" },
+    { "src": "api/*.py",  "use": "@vercel/python" },
     { "src": "public/**", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/gateway/(.*)", "dest": "/api/gateway.py" },
-    { "src": "/api/gateway",      "dest": "/api/gateway.py" },
-    { "src": "/api/alerts",       "dest": "/api/alerts.py"  },
-    { "src": "/api/analyzer",     "dest": "/api/analyzer.py"},
-    { "src": "/api/shifts/(.*)",  "dest": "/api/shifts.py"  },
-    { "src": "/api/shifts",       "dest": "/api/shifts.py"  },
-    { "src": "/api/uptime",       "dest": "/api/uptime.py"  },
-    { "src": "/api/dashboard",    "dest": "/api/dashboard.py"},
-    { "src": "/(.*)",             "dest": "/public/$1"      }
+    { "src": "/api/gateway/boot",   "dest": "/api/gateway.py"   },
+    { "src": "/api/gateway/ack",    "dest": "/api/gateway.py"   },
+    { "src": "/api/gateway",        "dest": "/api/gateway.py"   },
+    { "src": "/api/alerts",         "dest": "/api/alerts.py"    },
+    { "src": "/api/analyzer",       "dest": "/api/analyzer.py"  },
+    { "src": "/api/shifts/report",  "dest": "/api/shifts.py"    },
+    { "src": "/api/shifts",         "dest": "/api/shifts.py"    },
+    { "src": "/api/uptime",         "dest": "/api/uptime.py"    },
+    { "src": "/api/dashboard/(.*)", "dest": "/api/dashboard.py" },
+    { "src": "/api/dashboard",      "dest": "/api/dashboard.py" },
+    { "src": "/panel(.*)",          "dest": "/public/index.html"},
+    { "src": "/",                   "dest": "/public/index.html"},
+    { "src": "/(.*)",               "dest": "/public/$1"        }
   ]
 }
