@@ -1,2 +1,2 @@
-supabase==2.3.4
+supabase
 httpx==0.26.0
