@@ -1,7 +1,8 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/*.py", "use": "@vercel/python" }
+    { "src": "api/**", "use": "@vercel/python" },
+    { "src": "public/**", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/gateway/(.*)", "dest": "/api/gateway.py" },
@@ -13,14 +14,5 @@
     { "src": "/api/uptime",       "dest": "/api/uptime.py"  },
     { "src": "/api/dashboard",    "dest": "/api/dashboard.py"},
     { "src": "/(.*)",             "dest": "/public/$1"      }
-  ],
-  "env": {
-    "SUPABASE_URL":          "@supabase_url",
-    "SUPABASE_SERVICE_KEY":  "@supabase_service_key",
-    "GROQ_API_KEY":          "@groq_api_key",
-    "TWILIO_ACCOUNT_SID":    "@twilio_account_sid",
-    "TWILIO_AUTH_TOKEN":     "@twilio_auth_token",
-    "TWILIO_WHATSAPP_FROM":  "@twilio_whatsapp_from",
-    "VERCEL_URL":            "@vercel_url"
-  }
+  ]
 }
