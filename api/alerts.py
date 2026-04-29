@@ -4,7 +4,7 @@ import urllib.request
 from datetime import datetime, timezone, timedelta
 from supabase import create_client
 
-supabase = create_client(
+spbs = create_client(
     os.environ['SUPABASE_URL'],
     os.environ['SUPABASE_SERVICE_KEY']
 )
@@ -70,7 +70,7 @@ def escalar_alarmas_pendientes(ahora: datetime) -> int:
     escaladas = 0
 
     # Obtener alarmas activas que tienen próxima escalada vencida
-    alarmas = supabase.table('alarmas')\
+    alarmas = spbs.table('alarmas')\
         .select('*, dispositivos_industriales(nombre, tipo, sector), plantas(nombre)')\
         .eq('estado', 'activa')\
         .lte('proxima_escalada', ahora.isoformat())\
@@ -118,7 +118,7 @@ def escalar_alarmas_pendientes(ahora: datetime) -> int:
         notificados_actuales = alarma.get('notificados') or []
         nuevos_numeros = [d['whatsapp'] for d in destinatarios]
 
-        supabase.table('alarmas').update({
+        spbs.table('alarmas').update({
             'nivel_escalamiento': nivel_destino,
             'notificados':        notificados_actuales + nuevos_numeros,
             'proxima_escalada':   proxima.isoformat()
@@ -146,7 +146,7 @@ def obtener_destinatarios_nivel(
 
     roles = ROLES_POR_NIVEL.get(nivel, ['gerente'])
 
-    operadores = supabase.table('operadores')\
+    operadores = spbs.table('operadores')\
         .select('whatsapp, nombre, rol, horario_alertas')\
         .eq('planta_id', planta_id)\
         .in_('rol', roles)\
@@ -229,7 +229,7 @@ def verificar_gateways_offline(ahora: datetime) -> int:
     # Gateway sin heartbeat en más de 5 minutos = offline
     umbral = (ahora - timedelta(minutes=5)).isoformat()
 
-    gateways = supabase.table('gateways')\
+    gateways = spbs.table('gateways')\
         .select('id, codigo, planta_id, estado, ultima_conexion, plantas(nombre)')\
         .eq('activo', True)\
         .lte('ultima_conexion', umbral)\
@@ -246,7 +246,7 @@ def verificar_gateways_offline(ahora: datetime) -> int:
         minutos_off = int((ahora - ultima).total_seconds() / 60)
 
         # Marcar como offline
-        supabase.table('gateways')\
+        spbs.table('gateways')\
             .update({'estado': 'offline'})\
             .eq('id', gw['id'])\
             .execute()
@@ -256,7 +256,7 @@ def verificar_gateways_offline(ahora: datetime) -> int:
         nombre_plant = (gw.get('plantas') or {}).get('nombre', 'Planta')
 
         # Verificar si ya existe alarma activa de gateway offline
-        existente = supabase.table('alarmas')\
+        existente = spbs.table('alarmas')\
             .select('id')\
             .eq('planta_id', planta_id)\
             .eq('tipo', 'gateway_offline')\
@@ -264,7 +264,7 @@ def verificar_gateways_offline(ahora: datetime) -> int:
             .execute()
 
         if not existente.data:
-            supabase.table('alarmas').insert({
+            spbs.table('alarmas').insert({
                 'planta_id':          planta_id,
                 'dispositivo_id':     None,
                 'tipo':               'gateway_offline',
@@ -286,7 +286,7 @@ def verificar_gateways_offline(ahora: datetime) -> int:
         offline_count += 1
 
     # Marcar como online los que volvieron
-    supabase.table('gateways')\
+    spbs.table('gateways')\
         .update({'estado': 'online'})\
         .eq('estado', 'offline')\
         .gt('ultima_conexion', umbral)\
@@ -303,7 +303,7 @@ def procesar_cola_mensajes() -> int:
     enviados = 0
 
     # Obtener mensajes pendientes ordenados por prioridad y tiempo
-    mensajes = supabase.table('cola_mensajes_whatsapp')\
+    mensajes = spbs.table('cola_mensajes_whatsapp')\
         .select('*')\
         .eq('estado', 'pendiente')\
         .order('prioridad', desc=True)\
@@ -322,13 +322,13 @@ def procesar_cola_mensajes() -> int:
 
         # Si falló y tiene menos de 3 intentos, dejar como pendiente
         if not exito and intentos < 3:
-            supabase.table('cola_mensajes_whatsapp').update({
+            spbs.table('cola_mensajes_whatsapp').update({
                 'intentos':    intentos,
                 'ultimo_error': datetime.now(timezone.utc).isoformat()
             }).eq('id', msg['id']).execute()
             continue
 
-        supabase.table('cola_mensajes_whatsapp').update({
+        spbs.table('cola_mensajes_whatsapp').update({
             'estado':    estado_nuevo,
             'enviado_at': datetime.now(timezone.utc).isoformat(),
             'intentos':  intentos
@@ -395,7 +395,7 @@ def encolar_mensaje(
     tipo: str = 'alerta',
     prioridad: str = 'normal'
 ):
-    supabase.table('cola_mensajes_whatsapp').insert({
+    spbs.table('cola_mensajes_whatsapp').insert({
         'planta_id':    planta_id,
         'destinatario': destinatario,
         'mensaje':      mensaje,
