@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UPTIME IA Industrial · AIRBOOK IoT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN SYSTEM
+═══════════════════════════════════════════ */
+:root {
+  --bg:       #0A0C0F;
+  --bg2:      #111318;
+  --bg3:      #181C23;
+  --border:   #1E2330;
+  --border2:  #2A3040;
+  --text:     #E8EAF0;
+  --text2:    #7A8399;
+  --text3:    #4A5268;
+  --green:    #1DBC82;
+  --green-bg: #0D2E20;
+  --amber:    #F0A500;
+  --amber-bg: #2A1F00;
+  --red:      #E8404A;
+  --red-bg:   #2A0F12;
+  --blue:     #3D8EF0;
+  --blue-bg:  #0D1D35;
+  --mono:     'DM Mono', monospace;
+  --sans:     'Syne', sans-serif;
+  --radius:   6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+.shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 52px 1fr;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════ */
+.topbar {
+  grid-column: 1 / -1;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--green);
+  text-transform: uppercase;
+}
+
+.logo span { color: var(--text2); }
+
+.topbar-sep { flex: 1; }
+
+.plant-select {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  outline: none;
+}
+
+.plant-select:focus { border-color: var(--blue); }
+
+.topbar-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ═══════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════ */
+.sidebar {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-section {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--text3);
+  text-transform: uppercase;
+  padding: 12px 16px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 13px;
+  transition: background 0.1s, color 0.1s;
+  border-left: 2px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active {
+  color: var(--green);
+  border-left-color: var(--green);
+  background: var(--green-bg);
+}
+
+.nav-icon { width: 14px; text-align: center; font-size: 13px; }
+
+.badge-count {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════
+   MAIN CONTENT
+═══════════════════════════════════════════ */
+.main {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ═══════════════════════════════════════════
+   METRIC CARDS (top row)
+═══════════════════════════════════════════ */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.metric-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.metric-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+
+.metric-val {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1;
+}
+
+.metric-val.green  { color: var(--green); }
+.metric-val.amber  { color: var(--amber); }
+.metric-val.red    { color: var(--red); }
+
+.metric-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════
+   PANELS
+═══════════════════════════════════════════ */
+.panels-row {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.panel-action {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--blue);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* ═══════════════════════════════════════════
+   SENSOR TABLE
+═══════════════════════════════════════════ */
+.sensor-table { width: 100%; border-collapse: collapse; }
+
+.sensor-table th {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  text-align: left;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+
+.sensor-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.sensor-table tr:last-child td { border-bottom: none; }
+
+.sensor-table tr:hover td { background: var(--bg3); cursor: pointer; }
+
+.s-name { color: var(--text); font-size: 13px; }
+.s-sector { color: var(--text3); font-size: 11px; margin-top: 2px; }
+
+.s-val {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.badge-ok     { background: var(--green-bg); color: var(--green); }
+.badge-alerta { background: var(--amber-bg); color: var(--amber); }
+.badge-critico { background: var(--red-bg);  color: var(--red); }
+.badge-offline { background: #1A1A1A;         color: var(--text3); }
+.badge-trend   { background: var(--blue-bg);  color: var(--blue); }
+
+/* mini sparkline */
+.sparkline { display: block; }
+
+/* ═══════════════════════════════════════════
+   ALARMAS PANEL
+═══════════════════════════════════════════ */
+.alarm-list { display: flex; flex-direction: column; }
+
+.alarm-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+}
+
+.alarm-item:last-child { border-bottom: none; }
+.alarm-item.critico    { border-left-color: var(--red); }
+.alarm-item.alerta     { border-left-color: var(--amber); }
+
+.alarm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.alarm-name {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.alarm-time {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+}
+
+.alarm-msg {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════
+   CHART PANEL
+═══════════════════════════════════════════ */
+.chart-container {
+  padding: 16px;
+  position: relative;
+  height: 200px;
+}
+
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 160px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text3);
+}
+
+/* ═══════════════════════════════════════════
+   TURNO WIDGET
+═══════════════════════════════════════════ */
+.turno-widget {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.turno-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.turno-key {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.turno-val {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════════
+   LOADING / EMPTY
+═══════════════════════════════════════════ */
+.loading {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text3);
+  padding: 20px 16px;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .metrics-row { grid-template-columns: repeat(2, 1fr); }
+  .panels-row  { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="logo">UPTIME <span>IA Industrial</span></div>
+    <div class="status-pill">
+      <span class="dot"></span>
+      <span id="status-label">Conectando...</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <select class="plant-select" id="plant-select" onchange="cambiarPlanta(this.value)">
+      <option value="">Cargando plantas...</option>
+    </select>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="nav-section">Monitor</div>
+    <div class="nav-item active" onclick="setView('dashboard')">
+      <span class="nav-icon">◈</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="setView('dispositivos')">
+      <span class="nav-icon">⊡</span> Dispositivos
+    </div>
+    <div class="nav-item" onclick="setView('alarmas')">
+      <span class="nav-icon">◉</span> Alarmas
+      <span class="badge-count" id="badge-alarmas" style="display:none">0</span>
+    </div>
+
+    <div class="nav-section">Operación</div>
+    <div class="nav-item" onclick="setView('turno')">
+      <span class="nav-icon">▷</span> Turno activo
+    </div>
+
+    <div class="nav-section">Sistema</div>
+    <div class="nav-item" onclick="setView('gateways')">
+      <span class="nav-icon">⊕</span> Gateways ESP32
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main" id="main">
+    <div class="loading">Selecciona una planta para comenzar</div>
+  </main>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const API = window.location.origin + '/api/dashboard';
+let plantaId   = '';
+let vistaActual = 'dashboard';
+let chartInst  = null;
+let intervalId = null;
+
+// ═══════════════════════════════════════════
+// RELOJ
+// ═══════════════════════════════════════════
+function tick() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) +
+    ' · ' + now.toLocaleDateString('es-CO', {day:'2-digit',month:'short'});
+}
+setInterval(tick, 1000);
+tick();
+
+// ═══════════════════════════════════════════
+// CARGAR PLANTAS
+// ═══════════════════════════════════════════
+async function cargarPlantas() {
+  try {
+    const r    = await fetch(`${API}/plantas`);
+    const data = await r.json();
+    const sel  = document.getElementById('plant-select');
+    sel.innerHTML = '<option value="">— Seleccionar planta —</option>';
+    (data.plantas || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.nombre + (p.ciudad ? ` · ${p.ciudad}` : '');
+      sel.appendChild(opt);
+    });
+    if (data.plantas && data.plantas.length === 1) {
+      sel.value = data.plantas[0].id;
+      cambiarPlanta(data.plantas[0].id);
+    }
+  } catch(e) {
+    console.error('Error cargando plantas:', e);
+  }
+}
+
+function cambiarPlanta(id) {
+  plantaId = id;
+  if (!id) return;
+  clearInterval(intervalId);
+  renderVista();
+  intervalId = setInterval(renderVista, 30000);
+}
+
+// ═══════════════════════════════════════════
+// NAVEGACIÓN
+// ═══════════════════════════════════════════
+function setView(vista) {
+  vistaActual = vista;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  renderVista();
+}
+
+async function renderVista() {
+  if (!plantaId) return;
+  switch(vistaActual) {
+    case 'dashboard':    await renderDashboard();   break;
+    case 'dispositivos': await renderDispositivos(); break;
+    case 'alarmas':      await renderAlarmas();      break;
+    case 'turno':        await renderTurno();        break;
+    case 'gateways':     await renderGateways();     break;
+  }
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+async function renderDashboard() {
+  const [resumen, disps, alarmas] = await Promise.all([
+    fetch(`${API}/resumen?planta_id=${plantaId}`).then(r=>r.json()),
+    fetch(`${API}/dispositivos?planta_id=${plantaId}`).then(r=>r.json()),
+    fetch(`${API}/alarmas?planta_id=${plantaId}`).then(r=>r.json()),
+  ]);
+
+  const d   = resumen.dispositivos || {};
+  const a   = resumen.alarmas      || {};
+  const gw  = resumen.gateways     || {};
+  const turno = resumen.turno_activo;
+
+  // Badge alarmas en sidebar
+  const badge = document.getElementById('badge-alarmas');
+  if (a.total > 0) { badge.style.display=''; badge.textContent = a.total; }
+  else { badge.style.display='none'; }
+
+  // Status label
+  document.getElementById('status-label').textContent =
+    gw.online > 0 ? `${gw.online} gateway(s) online` : 'Sin gateway online';
+
+  // Construir lista de sensores
+  const sensorRows = (disps.dispositivos || []).slice(0,12).map(s => {
+    const val   = s.ultimo_valor !== null ? `${s.ultimo_valor}${s.unidad||''}` : '—';
+    const est   = s.estado_actual || 'desconocido';
+    let badgeClass = 'badge-ok';
+    let badgeText  = 'Normal';
+    if (est === 'error_comm')                       { badgeClass='badge-offline'; badgeText='Sin señal'; }
+    else if (est === 'offline')                     { badgeClass='badge-offline'; badgeText='Offline'; }
+    else if (s.ultimo_valor > (s.umbral_critico_max||Infinity)||
+             s.ultimo_valor < (s.umbral_critico_min||-Infinity)) { badgeClass='badge-critico'; badgeText='Crítico'; }
+    else if (s.ultimo_valor > (s.umbral_alerta_max||Infinity)||
+             s.ultimo_valor < (s.umbral_alerta_min||-Infinity))  { badgeClass='badge-alerta';  badgeText='Alerta'; }
+
+    return `
+      <tr onclick="abrirHistorial('${s.id}','${s.nombre}')">
+        <td><div class="s-name">${s.nombre}</div><div class="s-sector">${s.sector||'—'} · ${s.tipo.replace(/_/g,' ')}</div></td>
+        <td class="s-val">${val}</td>
+        <td><span class="status-badge ${badgeClass}">${badgeText}</span></td>
+      </tr>`;
+  }).join('');
+
+  // Construir lista de alarmas
+  const alarmItems = (alarmas.alarmas || []).slice(0,5).map(a => `
+    <div class="alarm-item ${a.severidad}">
+      <div class="alarm-header">
+        <div class="alarm-name">${(a.dispositivos_industriales||{}).nombre || 'Gateway'}</div>
+        <div class="alarm-time">hace ${a.edad_min||0} min</div>
+      </div>
+      <div class="alarm-msg">${a.mensaje.substring(0,80)}</div>
+    </div>`).join('') || '<div class="loading">✅ Sin alarmas activas</div>';
+
+  // Turno
+  const turnoHtml = turno ? `
+    <div class="turno-widget">
+      <div class="turno-row"><span class="turno-key">Operador</span><span class="turno-val">${turno.operador}</span></div>
+      <div class="turno-row"><span class="turno-key">Duración</span><span class="turno-val">${Math.floor(turno.duracion_min/60)}h ${turno.duracion_min%60}min</span></div>
+      <div class="turno-row"><span class="turno-key">Alarmas</span><span class="turno-val">${turno.alarmas_generadas}</span></div>
+      <div class="turno-row"><span class="turno-key">Comandos</span><span class="turno-val">${turno.comandos_ejecutados}</span></div>
+    </div>` :
+    '<div class="loading">Sin turno activo</div>';
+
+  document.getElementById('main').innerHTML = `
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="metric-label">Dispositivos</div>
+        <div class="metric-val green">${d.online||0}</div>
+        <div class="metric-sub">de ${d.total||0} en línea</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Sin señal</div>
+        <div class="metric-val ${(d.error||0)>0?'red':''}"">${d.error||0}</div>
+        <div class="metric-sub">errores de comm</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Alarmas críticas</div>
+        <div class="metric-val ${(a.criticas||0)>0?'red':'green'}">${a.criticas||0}</div>
+        <div class="metric-sub">requieren acción</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Alertas</div>
+        <div class="metric-val ${(a.alertas||0)>0?'amber':''}">${a.alertas||0}</div>
+        <div class="metric-sub">en revisión</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Gateways</div>
+        <div class="metric-val ${(gw.online||0)>0?'green':'red'}">${gw.online||0}</div>
+        <div class="metric-sub">de ${gw.total||0} online</div>
+      </div>
+    </div>
+
+    <div class="panels-row">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Sensores y actuadores</div>
+          <button class="panel-action" onclick="setNavAndRender('dispositivos')">Ver todos →</button>
+        </div>
+        <table class="sensor-table">
+          <thead><tr>
+            <th>Dispositivo</th>
+            <th>Valor actual</th>
+            <th>Estado</th>
+          </tr></thead>
+          <tbody>${sensorRows || '<tr><td colspan="3" class="loading">Sin dispositivos registrados</td></tr>'}</tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Alarmas activas</div>
+            <button class="panel-action" onclick="setNavAndRender('alarmas')">Ver todas →</button>
+          </div>
+          <div class="alarm-list">${alarmItems}</div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">Turno actual</div></div>
+          ${turnoHtml}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="chart-panel" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title" id="chart-title">Historial</div>
+        <button class="panel-action" onclick="cerrarChart()">✕ Cerrar</button>
+      </div>
+      <div class="chart-container">
+        <canvas id="sensor-chart"></canvas>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// HISTORIAL DE SENSOR (gráfica)
+// ═══════════════════════════════════════════
+async function abrirHistorial(sensorId, nombre) {
+  const panel = document.getElementById('chart-panel');
+  if (!panel) return;
+  panel.style.display = '';
+  document.getElementById('chart-title').textContent = `Historial 24h — ${nombre}`;
+  panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+
+  const data = await fetch(`${API}/historial?sensor_id=${sensorId}&horas=24`).then(r=>r.json());
+  const lecturas = data.lecturas || [];
+
+  if (!lecturas.length) {
+    document.querySelector('.chart-container').innerHTML = '<div class="chart-empty">Sin datos para mostrar</div>';
+    return;
+  }
+
+  const labels = lecturas.map(l => {
+    const d = new Date(l.timestamp);
+    return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+  });
+  const valores = lecturas.map(l => l.valor);
+
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+
+  const ctx = document.getElementById('sensor-chart').getContext('2d');
+  chartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: nombre,
+        data: valores,
+        borderColor: '#1DBC82',
+        backgroundColor: 'rgba(29,188,130,0.08)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#4A5268', font: { family: "'DM Mono'", size: 10 }, maxTicksLimit: 8 },
+             grid: { color: 'rgba(30,35,48,0.8)' } },
+        y: { ticks: { color: '#4A5268', font: { family: "'DM Mono'", size: 10 } },
+             grid: { color: 'rgba(30,35,48,0.8)' } }
+      }
+    }
+  });
+}
+
+function cerrarChart() {
+  const panel = document.getElementById('chart-panel');
+  if (panel) panel.style.display = 'none';
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+}
+
+// ═══════════════════════════════════════════
+// DISPOSITIVOS
+// ═══════════════════════════════════════════
+async function renderDispositivos() {
+  const data = await fetch(`${API}/dispositivos?planta_id=${plantaId}`).then(r=>r.json());
+  const sectores = data.por_sector || {};
+
+  let html = '';
+  for (const [sector, disps] of Object.entries(sectores)) {
+    html += `
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">${sector}</div>
+      <div class="panel" style="margin-bottom:16px">
+        <table class="sensor-table">
+          <thead><tr><th>Dispositivo</th><th>Tipo</th><th>Valor</th><th>Rango normal</th><th>Estado</th><th>Última lectura</th></tr></thead>
+          <tbody>
+            ${disps.map(d => {
+              const val  = d.ultimo_valor !== null ? `${d.ultimo_valor}${d.unidad||''}` : '—';
+              const est  = d.estado_actual || '—';
+              const rango = (d.rango_normal_min !== null) ? `${d.rango_normal_min}–${d.rango_normal_max}${d.unidad||''}` : '—';
+              let bc = 'badge-ok';
+              if (est==='error_comm') bc='badge-offline';
+              else if (est==='offline') bc='badge-offline';
+              const ultima = d.ultima_lectura ? new Date(d.ultima_lectura).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '—';
+              return `
+                <tr onclick="abrirHistorialExt('${d.id}','${d.nombre}')">
+                  <td><div class="s-name">${d.nombre}</div></td>
+                  <td style="color:var(--text3)">${d.tipo.replace(/_/g,' ')}</td>
+                  <td class="s-val">${val}</td>
+                  <td style="color:var(--text3)">${rango}</td>
+                  <td><span class="status-badge ${bc}">${est}</span></td>
+                  <td style="color:var(--text3)">${ultima}</td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  document.getElementById('main').innerHTML = html || '<div class="loading">Sin dispositivos registrados</div>';
+}
+
+async function abrirHistorialExt(sensorId, nombre) {
+  vistaActual = 'dashboard';
+  await renderDashboard();
+  setTimeout(() => abrirHistorial(sensorId, nombre), 100);
+}
+
+// ═══════════════════════════════════════════
+// ALARMAS
+// ═══════════════════════════════════════════
+async function renderAlarmas() {
+  const data = await fetch(`${API}/alarmas?planta_id=${plantaId}`).then(r=>r.json());
+  const alarmas = data.alarmas || [];
+
+  const rows = alarmas.map(a => {
+    const disp = (a.dispositivos_industriales || {}).nombre || 'Gateway';
+    const sev  = a.severidad === 'critico' ? 'badge-critico' : 'badge-alerta';
+    return `
+      <tr>
+        <td><span class="status-badge ${sev}">${a.severidad}</span></td>
+        <td><div class="s-name">${disp}</div></td>
+        <td style="color:var(--text2);max-width:320px">${a.mensaje}</td>
+        <td><span class="status-badge badge-offline">${a.estado}</span></td>
+        <td style="color:var(--text3)">${a.edad_min} min</td>
+        <td style="color:var(--text3);font-family:var(--mono);font-size:10px">${a.id.substring(0,8)}</td>
+      </tr>`;
+  }).join('') || '<tr><td colspan="6" class="loading">✅ Sin alarmas activas</td></tr>';
+
+  document.getElementById('main').innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Alarmas activas y reconocidas (${alarmas.length})</div>
+      </div>
+      <table class="sensor-table">
+        <thead><tr>
+          <th>Severidad</th><th>Dispositivo</th><th>Mensaje</th>
+          <th>Estado</th><th>Tiempo</th><th>ID</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// TURNO
+// ═══════════════════════════════════════════
+async function renderTurno() {
+  const data = await fetch(`${API}/turno?planta_id=${plantaId}`).then(r=>r.json());
+
+  if (!data.turno_activo) {
+    document.getElementById('main').innerHTML = `
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">Turno operacional</div></div>
+        <div class="loading">No hay turno activo en este momento.<br>El operador inicia el turno desde WhatsApp.</div>
+      </div>`;
+    return;
+  }
+
+  const horas = Math.floor(data.duracion_min/60);
+  const mins  = data.duracion_min % 60;
+
+  document.getElementById('main').innerHTML = `
+    <div class="panel" style="max-width:480px">
+      <div class="panel-header"><div class="panel-title">Turno activo</div></div>
+      <div class="turno-widget" style="gap:14px">
+        <div class="turno-row">
+          <span class="turno-key">Operador</span>
+          <span class="turno-val" style="font-size:16px">${data.operador}</span>
+        </div>
+        <div class="turno-row">
+          <span class="turno-key">Inicio</span>
+          <span class="turno-val">${new Date(data.inicio).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}</span>
+        </div>
+        <div class="turno-row">
+          <span class="turno-key">Duración</span>
+          <span class="turno-val" style="color:var(--green)">${horas}h ${mins}min</span>
+        </div>
+        <div class="turno-row">
+          <span class="turno-key">Alarmas generadas</span>
+          <span class="turno-val ${data.alarmas_generadas>0?'style="color:var(--amber)"':''}">${data.alarmas_generadas}</span>
+        </div>
+        <div class="turno-row">
+          <span class="turno-key">Comandos ejecutados</span>
+          <span class="turno-val">${data.comandos_ejecutados}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// GATEWAYS
+// ═══════════════════════════════════════════
+async function renderGateways() {
+  document.getElementById('main').innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><div class="panel-title">Gateways ESP32 registrados</div></div>
+      <div class="loading">Cargando...</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function setNavAndRender(vista) {
+  vistaActual = vista;
+  renderVista();
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+cargarPlantas();
+</script>
+</body>
+</html>
